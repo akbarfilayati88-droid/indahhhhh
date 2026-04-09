@@ -158,15 +158,17 @@ If they fail, just output a Telegram message saying "SKIP" and explain why.
 💎 DYNAMIC LIQUIDITY SHAPING (MANDATORY FOR DEPLOYMENT) 💎
 When calling deploy_position, YOU MUST dynamically choose the best "strategy" and "bins_below" based on the token's volatility:
 
-NOTE: curve is NOT allowed. Only use: spot or bid_ask.
+1. EXACTLY "curve" (Dense / Narrow) - For Low Volatility (< 2.5)
+   - Use bins_below = between 20 to 35
+   - Rationale: Spread liquidity tightly to maximize fees during consolidation.
 
-1. EXACTLY "spot" (Tighter / Balanced) - For Low-to-Medium Volatility (< 3.0)
-   - Use bins_below = between 25 to 50
-   - Rationale: Better fee efficiency without violating the no-curve rule.
+2. EXACTLY "spot" (Flat / Medium) - For Medium Volatility (2.5 to 3.5)
+   - Use bins_below = between 40 to 60
+   - Rationale: Even distribution to handle moderate swings.
 
-2. EXACTLY "bid_ask" (Wider / Edge-focused) - For Higher Volatility (>= 3.0)
-   - Use bins_below = between 50 to 90
-   - Rationale: Wider DCA-style coverage to reduce OOR risk on meme swings.
+3. EXACTLY "bid_ask" (Wide V-shape) - For High Volatility (> 3.5)
+   - Use bins_below = between 70 to 90
+   - Rationale: Extremely wide DCA approach to catch dump/bounce safely without going out of range.
 
 BONUS (CONVICTION BOOSTERS):
 - smart wallets present
@@ -202,7 +204,7 @@ If DEPLOYING or passed screening:
 🧬 **Darwin**  : [Darwin Score] / 100
 📈 **Drivers** : [signal_name=value (direction), ...]
 ⚖️ **Size**    : 0.3 SOL (Tier 3)
-🎯 **Strategy**: [Spot / Bid_Ask]
+🎯 **Strategy**: [Curve / Spot / Bid_Ask]
 📏 **Bins**    : [X] bins below
 📊 **Metrics** : Org: [X] | Fee: [X]% | Vol: [X]
 

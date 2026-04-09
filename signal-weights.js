@@ -99,11 +99,6 @@ export function recalculateWeights(perfData, cfg = {}) {
   const decayFactor   = darwin.decayFactor   ?? 0.95;
   const weightFloor   = darwin.weightFloor   ?? 0.3;
   const weightCeiling = darwin.weightCeiling ?? 2.5;
-  const perSignalMinSamples     = darwin.perSignalMinSamples     ?? minSamples;
-  const minAbsLiftToAdjust      = darwin.minAbsLiftToAdjust      ?? 0.05;
-  const strongLiftThreshold     = darwin.strongLiftThreshold     ?? 0.2;
-  const calibrationMinSamples   = darwin.calibrationMinSamples   ?? minSamples;
-  const meanReversionRate       = darwin.meanReversionRate       ?? 0.0;
 
   const data = loadWeights();
   const weights = data.weights || { ...DEFAULT_WEIGHTS };
@@ -123,8 +118,8 @@ export function recalculateWeights(perfData, cfg = {}) {
     return ts && ts >= cutoffISO;
   });
 
-  if (recent.length < calibrationMinSamples) {
-    log("signal_weights", `Only ${recent.length} records in ${windowDays}d window (need ${calibrationMinSamples}), skipping recalc`);
+  if (recent.length < minSamples) {
+    log("signal_weights", `Only ${recent.length} records in ${windowDays}d window (need ${minSamples}), skipping recalc`);
     return { changes: [], weights };
   }
 
@@ -140,8 +135,8 @@ export function recalculateWeights(perfData, cfg = {}) {
   // Compute predictive lift for each signal
   const lifts = {};
   for (const signal of SIGNAL_NAMES) {
-    const lift = computeLift(signal, wins, losses, perSignalMinSamples);
-    if (lift !== null && Math.abs(lift) >= minAbsLiftToAdjust) lifts[signal] = lift;
+    const lift = computeLift(signal, wins, losses, minSamples);
+    if (lift !== null) lifts[signal] = lift;
   }
 
   const ranked = Object.entries(lifts).sort((a, b) => b[1] - a[1]);
@@ -157,15 +152,11 @@ export function recalculateWeights(perfData, cfg = {}) {
   const topQuartile    = new Set(ranked.slice(0, q1End).map(([name]) => name));
   const bottomQuartile = new Set(ranked.slice(q3Start).map(([name]) => name));
 
-  // Apply boosts and decays (only for signals that passed minAbsLiftToAdjust)
+  // Apply boosts and decays
   const changes = [];
   for (const [signal, lift] of ranked) {
     const prev = weights[signal];
     let next = prev;
-
-    const isStrong = Math.abs(lift) >= strongLiftThreshold;
-    const strongBoost = boostFactor + (isStrong ? 0.01 : 0);
-    const strongDecay = decayFactor - (isStrong ? 0.01 : 0);
 
     if (topQuartile.has(signal)) {
       next = Math.min(prev * boostFactor, weightCeiling);
@@ -180,20 +171,6 @@ export function recalculateWeights(perfData, cfg = {}) {
       changes.push({ signal, from: prev, to: next, lift: Math.round(lift * 1000) / 1000, action: dir });
       weights[signal] = next;
       log("signal_weights", `${signal}: ${prev} -> ${next} (${dir}, lift=${lift.toFixed(3)})`);
-    }
-  }
-
-  // Mean reversion: gently pull weights back toward neutral (1.0) to avoid stale bias.
-  if (meanReversionRate > 0) {
-    const rr = Math.max(0, Math.min(0.25, meanReversionRate));
-    for (const signal of SIGNAL_NAMES) {
-      const prev = weights[signal] ?? 1.0;
-      const moved = prev + (1.0 - prev) * rr;
-      const next = Math.round(clamp(moved, weightFloor, weightCeiling) * 1000) / 1000;
-      if (next !== prev) {
-        weights[signal] = next;
-        changes.push({ signal, from: prev, to: next, lift: null, action: "mean_revert" });
-      }
     }
   }
 
@@ -341,10 +318,6 @@ function weightBar(val) {
   const filled  = Math.round(((val - 0.3) / (2.5 - 0.3)) * 10);
   const clamped = Math.max(0, Math.min(10, filled));
   return "#".repeat(clamped) + ".".repeat(10 - clamped);
-}
-
-function clamp(val, min, max) {
-  return Math.max(min, Math.min(max, val));
 }
 
 // ─── Darwin Score Computation (0–100 ranking) ─────────────────────

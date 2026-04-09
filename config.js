@@ -98,28 +98,6 @@ export const config = {
     generalModel:    u.generalModel    ?? process.env.LLM_MODEL ?? "stepfun/step-3.5-flash:free",
   },
 
-  // ─── Darwin (Learned Ranking) ────────────
-  // Used by signal-weights.js for weight recalculation + mean reversion.
-  // Kept separate from screening thresholds; these are meta-parameters.
-  darwin: {
-    enabled: u.darwinEnabled ?? u.darwin_enabled ?? false,
-    windowDays: u.darwinWindowDays ?? 60,
-    // Overall minimum number of performance records needed in window to run recalculation.
-    // (Not the per-signal gate; see darwinianPerSignalMinSamples)
-    minSamples: u.darwinMinSamples ?? 12,
-    boostFactor: u.darwinBoost ?? 1.03,
-    decayFactor: u.darwinDecay ?? 0.98,
-    weightFloor: u.darwinFloor ?? 0.45,
-    weightCeiling: u.darwinCeiling ?? 2.0,
-
-    // Darwinian tuning (stability controls)
-    perSignalMinSamples: u.darwinianPerSignalMinSamples ?? 12,
-    minAbsLiftToAdjust: u.darwinianMinAbsLiftToAdjust ?? 0.10,
-    strongLiftThreshold: u.darwinianStrongLiftThreshold ?? 0.20,
-    calibrationMinSamples: u.darwinianCalibrationMinSamples ?? 12,
-    meanReversionRate: u.darwinianMeanReversionRate ?? 0.015,
-  },
-
   // ─── Common Token Mints ────────────────
   tokens: {
     SOL:  "So11111111111111111111111111111111111111112",

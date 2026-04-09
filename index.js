@@ -477,40 +477,12 @@ export async function runScreeningCycle({ silent = false } = {}) {
         filteredOut.push({ name: pool.name, reason: `blocked launchpad (${launchpad})` });
         return false;
       }
-
-      // 1h sanity-check (meme coins): avoid clear fading momentum / distribution.
-      const priceChange1h = ti?.stats_1h?.price_change;
-      const netBuyers1h = ti?.stats_1h?.net_buyers;
-      if (netBuyers1h != null && netBuyers1h < -10) {
-        log("screening", `1h net-buyers skip: dropped ${pool.name} — net_buyers_1h=${netBuyers1h}`);
-        filteredOut.push({ name: pool.name, reason: `1h net buyers very negative (${netBuyers1h})` });
-        return false;
-      }
-      if (priceChange1h != null && priceChange1h < -20) {
-        log("screening", `1h dump skip: dropped ${pool.name} — price_change_1h=${priceChange1h}%`);
-        filteredOut.push({ name: pool.name, reason: `1h dump (${priceChange1h}%)` });
-        return false;
-      }
       const botPct = ti?.audit?.bot_holders_pct;
       const maxBotHoldersPct = config.screening.maxBotHoldersPct;
       if (botPct != null && maxBotHoldersPct != null && botPct > maxBotHoldersPct) {
         log("screening", `Bot-holder filter: dropped ${pool.name} — bots ${botPct}% > ${maxBotHoldersPct}%`);
         filteredOut.push({ name: pool.name, reason: `bot holders ${botPct}% > ${maxBotHoldersPct}%` });
         return false;
-      }
-
-      // Dead pool / fee collapse heuristics (keep mild; just avoid obvious zombies).
-      if (pool.swap_count != null && pool.swap_count < 10) {
-        log("screening", `Activity skip: dropped ${pool.name} — swap_count=${pool.swap_count} (too low)`);
-        filteredOut.push({ name: pool.name, reason: `low swaps (${pool.swap_count})` });
-        return false;
-      }
-      if (pool.fee_change_pct != null && pool.volume_change_pct != null) {
-        if (pool.fee_change_pct <= -60 && pool.volume_change_pct <= -60) {
-          log("screening", `Collapse skip: dropped ${pool.name} — fee_change=${pool.fee_change_pct}% vol_change=${pool.volume_change_pct}%`);
-          filteredOut.push({ name: pool.name, reason: `fee+volume collapsing (${pool.fee_change_pct}% / ${pool.volume_change_pct}%)` });
-          return false;
-        }
       }
       const volatility = pool.volatility;
       const volCap = config.screening.volatilityCap || 5.0; // Pinned Rule 12 says 5.0
@@ -579,8 +551,6 @@ export async function runScreeningCycle({ silent = false } = {}) {
       passing.map(({ pool }) => getActiveBin({ pool_address: pool.pool }))
     );
 
-    const { stageSignals } = await import("./signal-tracker.js");
-
     // Build compact candidate blocks
     const candidateBlocks = passing.map(({ pool, sw, n, ti, mem }, i) => {
       const botPct = ti?.audit?.bot_holders_pct ?? "?";
@@ -625,21 +595,6 @@ export async function runScreeningCycle({ silent = false } = {}) {
         n?.narrative ? `  narrative_untrusted: ${sanitizeUntrustedPromptText(n.narrative, 500)}` : `  narrative_untrusted: none`,
         mem ? `  memory_untrusted: ${sanitizeUntrustedPromptText(mem, 500)}` : null,
       ].filter(Boolean).join("\n");
-
-      // Stage deploy-time signals so Darwin can learn from actual outcomes later.
-      // (If deploy_position fires, tools/dlmm.js will attach this snapshot into state.json)
-      stageSignals(pool.pool, {
-        organic_score: pool.organic_score ?? null,
-        fee_tvl_ratio: pool.fee_active_tvl_ratio ?? pool.fee_tvl_ratio ?? null,
-        volume: pool.volume_window ?? null,
-        mcap: pool.mcap ?? null,
-        holder_count: pool.holders ?? null,
-        smart_wallets_present: (sw?.in_pool?.length ?? 0) > 0,
-        narrative_quality: null,
-        study_win_rate: null,
-        hive_consensus: null,
-        volatility: pool.volatility ?? null,
-      });
 
       return block;
     });
