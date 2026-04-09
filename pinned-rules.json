@@ -1,0 +1,29 @@
+{
+  "pinned_hard_rules": [
+    "📌 1. STARTUP: Every session — call get_position_pnl for ALL open positions first. Then call list_lessons and read ALL pinned lessons. Never act on cached data. No exceptions.",
+    "📌 2. NET PNL MANDATORY: net_pnl = fees_collected - impermanent_loss ONLY. Never use fee % alone. Internal PnL API wrong by 10-50x — always verify via get_position_pnl from lpagent before any close decision.",
+    "📌 3. TAKE PROFIT: Close when net_pnl >= 10% of position size verified via lpagent. Blacklisted pools: close at net_pnl >= $1.00. Never close based on internal PnL display.",
+    "📌 4. CLOSE REASON MANDATORY: Every close must state — CLOSE REASON: [TYPE] | net_pnl: [X%] | verified: lpagent. Types: TAKE_PROFIT, STOP_LOSS_OOR, REDEPLOY_OOR, DEAD_POOL. Never close without verifying PnL first.",
+    "📌 5. ENTRY TIMING: NEVER enter during or after a pump. Enter ONLY during consolidation or price decline. Token must be within 10% of its 1-hour LOW. 30-min consolidation required after pump. Evidence: ALL pump entries lost, ALL decline entries won.",
+    "📌 6. ENTRY QUALITY: Minimum — dev sold all + organic >= 70 + no rugpull + volatility <= 4.0. Smart wallet = bonus only. Hard skip if volatility >= 5.0 — IL accumulates faster than fees at high volatility.",
+    "📌 7. OOR RULE: OOR + net_pnl < -15% = close immediately. OOR + net_pnl > -15% = hold and wait. In range = never close due to IL alone. Only close in-range if fee/TVL = 0% for 2+ cycles OR net_pnl < -50%.",
+    "📌 8. PATIENCE: Never force deploy. If no pool passes ALL filters, do nothing. Missing a trade is better than a bad trade. Never lower standards to deploy. Idle capital is safer than bad positions.",
+    "📌 9. EMBRACE DUMPS: Price dumping = fee opportunity. Never panic close during dumps when in range and fee/TVL still active. When price bounces, fees increase. Hold through volatility.",
+    "📌 10. POSITION SIZING: Deploy 0.3-0.5 SOL per position for 1 SOL total capital. Keep 1 slot reserve always. Max 2 concurrent positions for quality control.",
+    "📌 11. 3-LOSS BLACKLIST: After 3 consecutive losses in same pool = add to permanent blacklist immediately. No exceptions, no cooldown. Evidence: 3 losses = pool not suited for strategy.",
+    "📌 12. HARD VOLATILITY CAP: Volatility >= 5.0 = HARD SKIP always. At vol 5+, IL accumulates faster than fees guaranteed. 2 consecutive SOL losses on same pool = auto-blacklist 24h minimum."
+  ],
+  "active_config": {
+    "take_profit_fee_pct": 15.0,
+    "stop_loss_pct": -15.0,
+    "volatility_cap": 5.0,
+    "min_organic_score": 70,
+    "max_positions": 2,
+    "deploy_size_range": [
+      0.3,
+      0.5
+    ],
+    "auto_swap_after_claim": true,
+    "sol_mode": true
+  }
+}
